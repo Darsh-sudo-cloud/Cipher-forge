@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BREACH LAB | Passphrase Forge</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap");
+
+    /* ---------- Futuristic red-black background ---------- */
+    html {
+      background: #050005;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      position: relative;
+      overflow-x: hidden;
+      background: transparent;
+    }
+
+    /* Red glow blobs that slowly breathe */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255, 26, 60, 0.38), transparent 42%),
+        radial-gradient(circle at 82% 76%, rgba(255, 90, 0, 0.26), transparent 46%),
+        radial-gradient(circle at 50% 110%, rgba(140, 0, 25, 0.5), transparent 62%);
+      animation: breathe 9s ease-in-out infinite alternate;
+    }
+
+    /* Moving red grid with scanlines on top */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px),
+        linear-gradient(rgba(255, 26, 60, 0.14) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 26, 60, 0.14) 1px, transparent 1px);
+      background-size: auto, 48px 48px, 48px 48px;
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+      animation: gridMove 18s linear infinite;
+    }
+
+    @keyframes breathe {
+      from { opacity: 0.75; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes gridMove {
+      from { background-position: 0 0, 0 0, 0 0; }
+      to   { background-position: 0 0, 0 48px, 48px 0; }
+    }
+
+    @keyframes shine {
+      from { background-position: 0% 50%; }
+      to   { background-position: 200% 50%; }
+    }
+
+    /* ---------- Side decorations (fill the empty edges) ---------- */
+    .side {
+      position: fixed;
+      top: 50%;
+      z-index: 0;
+      pointer-events: none;
+      font-family: "Share Tech Mono", Consolas, monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      writing-mode: vertical-rl;
+      color: rgba(255, 107, 107, 0.45);
+      white-space: nowrap;
+    }
+
+    .side.left {
+      left: 14px;
+      transform: translateY(-50%) rotate(180deg);
+    }
+
+    .side.right {
+      right: 14px;
+      transform: translateY(-50%);
+    }
+
+    /* Small dashed stickers scattered at the edges */
+    .sticker {
+      position: fixed;
+      z-index: 0;
+      pointer-events: none;
+      padding: 6px 12px;
+      font-family: "Share Tech Mono", Consolas, monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #00f5d4;
+      background: rgba(8, 8, 14, 0.6);
+      border: 1px dashed rgba(0, 245, 212, 0.6);
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .sticker.pink {
+      color: #ff6b8a;
+      border-color: rgba(255, 107, 138, 0.6);
+    }
+
+    .sticker.s1 { top: 20%; left: 5%; transform: rotate(-8deg); }
+    .sticker.s2 { top: 62%; left: 3%; transform: rotate(5deg); }
+    .sticker.s3 { top: 28%; right: 4%; transform: rotate(7deg); }
+    .sticker.s4 { top: 70%; right: 5%; transform: rotate(-4deg); }
+
+    /* ---------- Page layout ---------- */
+    .page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .site-title {
+      text-align: center;
+      margin-bottom: 26px;
+    }
+
+    .site-title h1 {
+      margin: 0;
+      font-family: "Orbitron", Arial, sans-serif;
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      background: linear-gradient(90deg, #ff1a3c, #ff8a00, #ff1a3c, #ff8a00);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shine 5s linear infinite;
+      filter: drop-shadow(0 0 14px rgba(255, 26, 60, 0.6));
+    }
+
+    .site-title .tagline {
+      margin-top: 10px;
+      font-family: "Share Tech Mono", Consolas, monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #ff6b6b;
+      opacity: 0.85;
+    }
+
+    /* ---------- Cybersecurity outline frame around the two boxes ---------- */
+    .cyber-frame {
+      position: relative;
+      width: 92%;
+      max-width: 860px;
+      box-sizing: border-box;
+      padding: 44px 22px 22px;
+      border: 1px solid rgba(0, 245, 212, 0.3);
+      border-radius: 4px;
+      background: rgba(8, 8, 14, 0.72);
+      box-shadow: 0 0 30px rgba(0, 245, 212, 0.08),
+                  inset 0 0 40px rgba(255, 26, 60, 0.08);
+      overflow: hidden;
+    }
+
+    .cyber-frame.single {
+      max-width: 452px;
+    }
+
+    /* Red corner brackets */
+    .corner {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-color: #ff1a3c;
+      border-style: solid;
+      border-width: 0;
+    }
+
+    .corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; }
+    .corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; }
+    .corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; }
+    .corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+
+    /* Small monospace labels across the top */
+    .cyber-label,
+    .cyber-status {
+      position: absolute;
+      top: 14px;
+      font-family: "Share Tech Mono", Consolas, monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+    }
+
+    .cyber-label {
+      left: 22px;
+      color: #00f5d4;
+      opacity: 0.85;
+    }
+
+    .cyber-status {
+      right: 22px;
+      color: #ff6b8a;
+      opacity: 0.9;
+    }
+
+    /* A thin scanning line that moves down the frame */
+    .cyber-frame::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0, 245, 212, 0.7), transparent);
+      box-shadow: 0 0 12px rgba(0, 245, 212, 0.6);
+      pointer-events: none;
+      animation: scan 5s linear infinite;
+    }
+
+    @keyframes scan {
+      from { top: 0; }
+      to   { top: 100%; }
+    }
+
+    .stack {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    /* When the timing card is hidden, the main card fills the frame */
+    .cyber-frame.single .stack {
+      grid-template-columns: 1fr;
+    }
+
+    /* ---------- Main card (unchanged) ---------- */
+    .card {
+      background: #1a1a22;
+      padding: 24px;
+      border-radius: 12px;
+      box-sizing: border-box;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .meter {
+      margin-top: 16px;
+      height: 14px;
+      background: #2a2a33;
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    #bar {
+      height: 100%;
+      width: 0%;
+      background: red;
+      transition: width 0.3s, background 0.3s;
+    }
+
+    #label {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    #score {
+      opacity: 0.7;
+      font-size: 0.9rem;
+    }
+
+    #verdict {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #111;
+      border-left: 4px solid #555;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    #verdict.broken {
+      background: linear-gradient(135deg, rgba(255, 26, 60, 0.18), rgba(255, 138, 0, 0.08));
+      border-left-color: #ff1a3c;
+      box-shadow: 0 0 14px rgba(255, 26, 60, 0.35);
+    }
+
+    #verdict.survived {
+      background: linear-gradient(135deg, rgba(0, 245, 212, 0.14), rgba(123, 47, 247, 0.16));
+      border-left-color: #00f5d4;
+      box-shadow: 0 0 14px rgba(0, 245, 212, 0.3);
+    }
+
+    #sense {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    button {
+      margin-top: 14px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      background: #444;
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #555;
+    }
+
+    /* ---------- Timing card (unchanged) ---------- */
+    .timing-card {
+      background-image: linear-gradient(#141420, #141420),
+                        linear-gradient(120deg, #00f5d4, #7b2ff7, #ff006e);
+      background-origin: border-box;
+      background-clip: padding-box, border-box;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 20px;
+      box-sizing: border-box;
+      box-shadow: 0 0 22px rgba(123, 47, 247, 0.25);
+    }
+
+    .timing-card.hidden {
+      display: none;
+    }
+
+    .timing-title {
+      font-weight: bold;
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+      background: linear-gradient(90deg, #00f5d4, #ff006e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .timing-subtitle {
+      opacity: 0.6;
+      font-size: 0.8rem;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      margin: 14px 0;
+    }
+
+    .row-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.9rem;
+    }
+
+    .row-time {
+      font-weight: bold;
+      color: #00f5d4;
+      text-shadow: 0 0 8px rgba(0, 245, 212, 0.5);
+    }
+
+    .track {
+      height: 8px;
+      background: #26263a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00f5d4, #7b2ff7, #ff006e);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    .row-note {
+      opacity: 0.55;
+      font-size: 0.75rem;
+      margin-top: 5px;
+    }
+
+    .broken-msg {
+      color: #ff6b8a;
+      font-weight: bold;
+    }
+
+    .timing-footer {
+      opacity: 0.5;
+      font-size: 0.75rem;
+      margin-top: 16px;
+      border-top: 1px solid #2a2a3a;
+      padding-top: 10px;
+    }
+
+    /* ---------- Comparison table ---------- */
+    .bench {
+      width: 92%;
+      max-width: 860px;
+      margin-top: 18px;
+      padding: 22px;
+      background: #1a1a22;
+      border: 1px solid rgba(0, 245, 212, 0.18);
+      border-radius: 12px;
+      box-sizing: border-box;
+    }
+
+    .bench-label {
+      font-family: "Share Tech Mono", Consolas, monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: #ff6b8a;
+      opacity: 0.85;
+      margin-bottom: 6px;
+    }
+
+    .bench-title {
+      margin: 0 0 6px;
+      font-family: "Orbitron", Arial, sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      background: linear-gradient(90deg, #00f5d4, #ff006e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .bench-summary {
+      margin: 0 0 14px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .bench-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .bench-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: #00f5d4;
+      border-bottom: 1px solid #2a2a3a;
+      font-weight: bold;
+    }
+
+    .bench-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #22222e;
+    }
+
+    .bench-table tr:hover td {
+      background: rgba(123, 47, 247, 0.08);
+    }
+
+    .match {
+      color: #00f5d4;
+      font-weight: bold;
+    }
+
+    .miss {
+      color: #ff6b8a;
+      font-weight: bold;
+    }
+
+    /* Page arrows: 8 rows per page */
+    .bench-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      font-size: 0.85rem;
+    }
+
+    .bench-page {
+      opacity: 0.8;
+    }
+
+    .nav-arrow {
+      margin-top: 0;
+      width: 44px;
+      height: 36px;
+      font-size: 1.2rem;
+      background: rgba(0, 245, 212, 0.12);
+      border: 1px solid rgba(0, 245, 212, 0.4);
+      color: #00f5d4;
+      border-radius: 6px;
+    }
+
+    .nav-arrow:hover {
+      background: rgba(0, 245, 212, 0.25);
+    }
+
+    .nav-arrow:disabled {
+      opacity: 0.3;
+      cursor: default;
+      background: transparent;
+    }
+
+    /* ---------- Footer credit ---------- */
+    .credit {
+      margin: 28px 0 20px;
+      font-family: "Share Tech Mono", Consolas, monospace;
+      text-align: center;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: #ff6b6b;
+      opacity: 0.75;
+    }
+
+    /* ---------- Narrow screens ---------- */
+    @media (max-width: 1100px) {
+      .sticker {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .side {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .stack {
+        grid-template-columns: 1fr;
+      }
+
+      .cyber-frame {
+        max-width: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Side text and stickers: decoration only, they don't affect the layout -->
+  <div class="side left">Encrypt // Attack // Verify // Defend</div>
+  <div class="side right">Passphrase analysis // Local only</div>
+
+  <div class="sticker s1">Local analysis</div>
+  <div class="sticker s2 pink">Nothing sent</div>
+  <div class="sticker s3 pink">Stage 1 / 2 / 3</div>
+  <div class="sticker s4">Verified 26 cases</div>
+
+  <div class="page">
+
+    <header class="site-title">
+      <h1>BREACH LAB</h1>
+      <div class="tagline">Forge a passphrase that survives the attack</div>
+    </header>
+
+    <div class="cyber-frame" id="cyber-frame">
+      <span class="corner tl"></span>
+      <span class="corner tr"></span>
+      <span class="corner bl"></span>
+      <span class="corner br"></span>
+      <div class="cyber-label">// BREACH_LAB :: PASSPHRASE ANALYSIS</div>
+      <div class="cyber-status">STATUS: ARMED</div>
+
+      <div class="stack" id="stack">
+
+        <div class="card">
+          <input type="text" id="passphrase" placeholder="Type here...">
+
+          <div class="meter">
+            <div id="bar"></div>
+          </div>
+
+          <div id="label">Start typing</div>
+          <div id="score"></div>
+
+          <div id="verdict">Type a passphrase to run the attack.</div>
+
+          <div id="sense"></div>
+
+          <button id="suggest">Suggest a strong passphrase</button>
+        </div>
+
+        <div class="timing-card hidden" id="timing-card">
+          <div class="timing-title">How long would an attacker take?</div>
+          <div class="timing-subtitle">Longer bars mean the attack takes longer.</div>
+          <div id="timing-list"></div>
+          <div class="timing-footer">
+            These are estimates based on assumed attack speeds, not measured times.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <section class="bench" id="bench">
+      <div class="bench-label">// RESULTS :: BENCHMARK 26 CASES</div>
+      <h2 class="bench-title">Analysis Log</h2>
+      <p class="bench-summary" id="bench-summary"></p>
+
+      <table class="bench-table">
+        <thead>
+          <tr>
+            <th>Passphrase</th>
+            <th>Expected</th>
+            <th>Attacker</th>
+            <th>Common checker</th>
+          </tr>
+        </thead>
+        <tbody id="bench-body"></tbody>
+      </table>
+
+      <div class="bench-nav">
+        <button class="nav-arrow" id="bench-prev" aria-label="Previous rows">&#8592;</button>
+        <span class="bench-page" id="bench-page"></span>
+        <button class="nav-arrow" id="bench-next" aria-label="Next rows">&#8594;</button>
+      </div>
+    </section>
+
+    <footer class="credit">Made by Darsh Vora</footer>
+
+  </div>
+
+  <script src="scoring.js"></script>
+  <script src="attacker.js"></script>
+  <script src="model.js"></script>
+  <script src="benchmark.js"></script>
+  <script src="baseline.js"></script>
+  <script>
+    var input = document.getElementById("passphrase");
+    var bar = document.getElementById("bar");
+    var label = document.getElementById("label");
+    var scoreText = document.getElementById("score");
+    var verdict = document.getElementById("verdict");
+    var sense = document.getElementById("sense");
+    var frame = document.getElementById("cyber-frame");
+    var timingCard = document.getElementById("timing-card");
+    var timingList = document.getElementById("timing-list");
+    var suggestButton = document.getElementById("suggest");
+
+    // Words used to build suggestions. Same list as wordlist.txt.
+    var SUGGEST_WORDS = ["ember", "velvet", "harbor", "quartz", "lantern", "meadow",
+      "falcon", "glacier", "cobalt", "orbit", "saddle", "violet", "canyon",
+      "pepper", "thunder", "mosaic", "ripple", "summit", "crystal"];
+    var SUGGEST_SYMBOLS = ["#", "%", "&", "*"];
+
+    // Builds one candidate like "ember-falcon-quartz-41%"
+    function makeCandidate() {
+      var picked = [];
+      while (picked.length < 3) {
+        var word = SUGGEST_WORDS[Math.floor(Math.random() * SUGGEST_WORDS.length)];
+        if (picked.indexOf(word) === -1) {
+          picked.push(word);
+        }
+      }
+      var number = 10 + Math.floor(Math.random() * 90);
+      var symbol = SUGGEST_SYMBOLS[Math.floor(Math.random() * SUGGEST_SYMBOLS.length)];
+      return picked.join("-") + "-" + number + symbol;
+    }
+
+    // Shows the score and meter for the current text
+    function updateMeter(text) {
+      if (text === "") {
+        bar.style.width = "0%";
+        label.textContent = "Start typing";
+        scoreText.textContent = "";
+        return;
+      }
+
+      var score = scorePassphrase(text);
+      bar.style.width = score + "%";
+
+      if (score < 40) {
+        bar.style.background = "red";
+      } else if (score < 70) {
+        bar.style.background = "orange";
+      } else if (score < 90) {
+        bar.style.background = "yellowgreen";
+      } else {
+        bar.style.background = "limegreen";
+      }
+
+      label.textContent = strengthLabel(score);
+      scoreText.textContent = "Score: " + score + " / 100";
+    }
+
+    // Shows the attacker's result in the verdict box, with a colour for the outcome
+    function updateVerdict(text) {
+      if (text === "") {
+        verdict.className = "";
+        verdict.textContent = "Type a passphrase to run the attack.";
+        return;
+      }
+
+      var result = runAttack(text);
+
+      if (result.broken) {
+        verdict.className = "broken";
+        verdict.textContent = "Broken at stage " + result.stage +
+          " (" + result.reason + "). An attacker would not need to guess.";
+      } else {
+        verdict.className = "survived";
+        verdict.textContent = "Survived all three stages. Estimated time to guess: " +
+          describeTime(result.seconds) + ".";
+      }
+    }
+
+    // Shows what the learned model thinks of the text
+    function updateSense(text) {
+      if (text === "") {
+        sense.textContent = "";
+        return;
+      }
+
+      var result = senseLabel(text);
+      sense.textContent = "Pattern Sense: " + result.label + ". " + result.note;
+    }
+
+    // Turns a number of seconds into a bar width from 3 to 100.
+    // Each step of 10 times longer adds about 11 percent, so the bar stays readable.
+    function barPercent(seconds) {
+      var pct = (Math.log10(seconds + 1) / 9) * 100;
+      if (pct > 100) pct = 100;
+      if (pct < 3) pct = 3;
+      return pct;
+    }
+
+    // Builds one row: name, time, bar, and note
+    function addRow(name, time, seconds, note) {
+      var row = document.createElement("div");
+      row.className = "row";
+
+      var head = document.createElement("div");
+      head.className = "row-head";
+
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = name;
+
+      var timeSpan = document.createElement("span");
+      timeSpan.className = "row-time";
+      timeSpan.textContent = time;
+
+      head.appendChild(nameSpan);
+      head.appendChild(timeSpan);
+
+      var track = document.createElement("div");
+      track.className = "track";
+
+      var fill = document.createElement("div");
+      fill.className = "fill";
+      track.appendChild(fill);
+
+      var noteDiv = document.createElement("div");
+      noteDiv.className = "row-note";
+      noteDiv.textContent = note;
+
+      row.appendChild(head);
+      row.appendChild(track);
+      row.appendChild(noteDiv);
+      timingList.appendChild(row);
+
+      // Start the bar at zero, then animate it to its width
+      setTimeout(function () {
+        fill.style.width = barPercent(seconds) + "%";
+      }, 50);
+    }
+
+    // Shows the timing card for each attack speed.
+    // When there is no text, the card is hidden and the main card is centred.
+    function updateTiming(text) {
+      timingList.innerHTML = "";
+
+      if (text === "") {
+        timingCard.classList.add("hidden");
+        frame.classList.add("single");
+        return;
+      }
+
+      timingCard.classList.remove("hidden");
+      frame.classList.remove("single");
+
+      var result = runAttack(text);
+
+      if (result.broken) {
+        var msg = document.createElement("div");
+        msg.className = "broken-msg";
+        msg.textContent = "Almost instant: broken at a known stage (" + result.reason + ").";
+        timingList.appendChild(msg);
+        return;
+      }
+
+      // On average the attacker finds the answer halfway through
+      var average = result.guesses / 2;
+
+      for (var i = 0; i < ATTACK_SCENARIOS.length; i++) {
+        var s = ATTACK_SCENARIOS[i];
+        var seconds = average / s.rate;
+        addRow(s.name, describeTime(seconds), seconds, s.note);
+      }
+    }
+
+    // Runs when the user types
+    input.addEventListener("input", function () {
+      updateMeter(input.value);
+      updateVerdict(input.value);
+      updateSense(input.value);
+      updateTiming(input.value);
+    });
+
+    // Tries up to 50 candidates and fills the box with the first one that survives
+    suggestButton.addEventListener("click", function () {
+      var candidate = "";
+      for (var i = 0; i < 50; i++) {
+        candidate = makeCandidate();
+        if (!runAttack(candidate).broken) {
+          break;
+        }
+      }
+      input.value = candidate;
+      updateMeter(candidate);
+      updateVerdict(candidate);
+      updateSense(candidate);
+      updateTiming(candidate);
+    });
+
+    // ---------- Comparison table with 8 rows per page ----------
+    var benchBody = document.getElementById("bench-body");
+    var benchSummary = document.getElementById("bench-summary");
+    var benchPage = document.getElementById("bench-page");
+    var benchPrev = document.getElementById("bench-prev");
+    var benchNext = document.getElementById("bench-next");
+
+    var PAGE_SIZE = 8;
+    var currentPage = 0;
+    var benchResults = [];
+
+    // Turns the attacker's result into the same labels the benchmark uses
+    function attackerLabel(text) {
+      var result = runAttack(text);
+      if (!result.broken) {
+        return "survives";
+      }
+      return "stage" + result.stage;
+    }
+
+    // "accept" should match "survives". "reject" should match any broken result.
+    function checkerAgrees(text, expected) {
+      var accepted = baselineCheck(text) === "accept";
+      if (expected === "survives") {
+        return accepted;
+      }
+      return !accepted;
+    }
+
+    // Runs every benchmark passphrase through both checkers, once
+    function computeComparison() {
+      var attackerHits = 0;
+      var checkerHits = 0;
+
+      for (var i = 0; i < BENCHMARK.length; i++) {
+        var item = BENCHMARK[i];
+        var attacker = attackerLabel(item.text);
+        var attackerOk = attacker === item.expected;
+        var checker = baselineCheck(item.text);
+        var checkerOk = checkerAgrees(item.text, item.expected);
+
+        if (attackerOk) attackerHits++;
+        if (checkerOk) checkerHits++;
+
+        benchResults.push({
+          text: item.text,
+          expected: item.expected,
+          attacker: attacker,
+          attackerOk: attackerOk,
+          checker: checker,
+          checkerOk: checkerOk
+        });
+      }
+
+      benchSummary.textContent =
+        "Attacker matched " + attackerHits + " of " + BENCHMARK.length +
+        " expected results. Common checker matched " + checkerHits +
+        " of " + BENCHMARK.length + ".";
+    }
+
+    // Adds a plain text cell to a row
+    function addCell(row, text) {
+      var cell = document.createElement("td");
+      cell.textContent = text;
+      row.appendChild(cell);
+    }
+
+    // Adds a cell that shows the result with a tick or cross
+    function addMarkCell(row, text, ok) {
+      var cell = document.createElement("td");
+      cell.className = ok ? "match" : "miss";
+      cell.textContent = text + (ok ? "  ✓" : "  ✗");
+      row.appendChild(cell);
+    }
+
+    // Draws only the rows for the current page
+    function renderBenchPage() {
+      benchBody.innerHTML = "";
+
+      var total = benchResults.length;
+      var totalPages = Math.ceil(total / PAGE_SIZE);
+      var start = currentPage * PAGE_SIZE;
+      var end = Math.min(start + PAGE_SIZE, total);
+
+      for (var i = start; i < end; i++) {
+        var r = benchResults[i];
+        var row = document.createElement("tr");
+        addCell(row, r.text);
+        addCell(row, r.expected);
+        addMarkCell(row, r.attacker, r.attackerOk);
+        addMarkCell(row, r.checker, r.checkerOk);
+        benchBody.appendChild(row);
+      }
+
+      benchPage.textContent = "Page " + (currentPage + 1) + " of " + totalPages +
+        "  |  rows " + (start + 1) + " to " + end + " of " + total;
+
+      benchPrev.disabled = currentPage === 0;
+      benchNext.disabled = currentPage >= totalPages - 1;
+    }
+
+    benchPrev.addEventListener("click", function () {
+      if (currentPage > 0) {
+        currentPage--;
+        renderBenchPage();
+      }
+    });
+
+    benchNext.addEventListener("click", function () {
+      var totalPages = Math.ceil(benchResults.length / PAGE_SIZE);
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        renderBenchPage();
+      }
+    });
+
+    // The benchmark never changes while the page is open, so compute it once
+    computeComparison();
+    renderBenchPage();
+  </script>
+
+</body>
+</html>

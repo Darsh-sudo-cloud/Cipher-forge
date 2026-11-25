@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <script src="scoring.js"></script>
+  <script src="attacker.js"></script>
+  <script src="benchmark.js"></script>
+  <script src="baseline.js"></script>
+   
+  <script>
+        console.log("password123 -> " + JSON.stringify(runAttack("password123")));
+    console.log("Tiger-River-Moon-42 -> " + JSON.stringify(runAttack("Tiger-River-Moon-42")));
+    console.log("Qz9#vLp2!mWk7 -> " + JSON.stringify(runAttack("Qz9#vLp2!mWk7")));
+    console.log("time: " + describeTime(runAttack("Qz9#vLp2!mWk7").seconds));
+         console.log("check " + "violet-summit-glacier-54#" + ": " + JSON.stringify(runAttack("violet-summit-glacier-54#")));
+          console.log("check " + "cobalt-mosaic-canyon-14#" + ": " + JSON.stringify(runAttack("cobalt-mosaic-canyon-14#")));
+  </script>
+</body>
+</html>
