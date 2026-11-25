@@ -30,6 +30,10 @@ The project has four parts:
 
 It also has a generator that suggests passphrases that survive the same attack, and a C version of the attacker that runs in the terminal.
 
+## Access it through
+
+ https://darsh-sudo-cloud.github.io/Cipher-forge/
+
 ## Project structure
 
 ```
